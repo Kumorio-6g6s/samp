@@ -2,6 +2,112 @@ script_author('Nero')
 script_name('Doroka Tools')
 script_version('1.0 beta')
 
+function addChat(text)
+	local color_chat = 'aa3197'
+	local text = tostring(text):gsub('{mc}', '{' .. color_chat .. '}'):gsub('{%-1}', '{FFFFFF}')
+	sampAddChatMessage(string.format('¬´ %s ¬ª {FFFFFF}%s', thisScript().name, text), tonumber('0x' .. color_chat))
+end
+
+local enable_autoupdate = true -- Set to false to disable auto-update + disable sending initial telemetry (server, moonloader version, script version, samp nickname, virtual volume serial number)
+local autoupdate_loaded = false
+local Update = nil
+
+if enable_autoupdate then
+    local updater_loaded, Updater = pcall(loadstring, [[
+        return {
+            check = function(a, b, c)
+                local d = require('moonloader').download_status
+                local e = os.tmpname()
+                local f = os.clock()
+
+                if doesFileExist(e) then
+                    os.remove(e)
+                end
+
+                downloadUrlToFile(a, e, function(g, h, i, j)
+                    if h == d.STATUSEX_ENDDOWNLOAD then
+                        if doesFileExist(e) then
+                            local k = io.open(e, 'r')
+                            if k then
+                                local l = decodeJson(k:read('*a'))
+                                updatelink = l.updateurl
+                                updateversion = l.latest
+                                k:close()
+                                os.remove(e)
+
+                                if updateversion ~= thisScript().version then
+                                    lua_thread.create(function(b)
+                                        local d = require('moonloader').download_status
+                                        local m = -1
+
+                                        addChat(b .. '–û–±–Ω–∞—Ä—É–∂–µ–Ω–æ –æ–±–Ω–æ–≤–ª–µ–Ω–∏–µ. –ü—ã—Ç–∞—é—Å—å –æ–±–Ω–æ–≤–∏—Ç—å—Å—è c ' .. thisScript().version .. ' –Ω–∞ ' .. updateversion, m)
+                                        wait(250)
+
+                                        downloadUrlToFile(updatelink, thisScript().path, function(n, o, p, q)
+                                            if o == d.STATUS_DOWNLOADINGDATA then
+                                                print(string.format('–ó–∞–≥—Ä—É–∂–µ–Ω–æ %d –∏–∑ %d.', p, q))
+                                            elseif o == d.STATUS_ENDDOWNLOADDATA then
+                                                addChat('–ó–∞–≥—Ä—É–∑–∫–∞ –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è –∑–∞–≤–µ—Ä—à–µ–Ω–∞.')
+                                                addChat(b .. '–û–±–Ω–æ–≤–ª–µ–Ω–∏–µ –∑–∞–≤–µ—Ä—à–µ–Ω–æ!', m)
+                                                goupdatestatus = true
+                                                lua_thread.create(function()
+                                                    wait(500)
+                                                    thisScript():reload()
+                                                end)
+                                            end
+
+                                            if o == d.STATUSEX_ENDDOWNLOAD then
+                                                if goupdatestatus == nil then
+                                                    addChat(b .. '–û–±–Ω–æ–≤–ª–µ–Ω–∏–µ –ø—Ä–æ—à–ª–æ –Ω–µ—É–¥–∞—á–Ω–æ. –ó–∞–ø—É—Å–∫–∞—é —É—Å—Ç–∞—Ä–µ–≤—à—É—é –≤–µ—Ä—Å–∏—é..', m)
+                                                    update = false
+                                                end
+                                            end
+                                        end)
+                                    end, b)
+                                else
+                                    update = false
+                                    addChat('v' .. thisScript().version .. ': –û–±–Ω–æ–≤–ª–µ–Ω–∏–µ –Ω–µ —Ç—Ä–µ–±—É–µ—Ç—Å—è.')
+
+                                    if l.telemetry then
+                                        local r = require("ffi")
+                                        r.cdef"int __stdcall GetVolumeInformationA(const char* lpRootPathName, char* lpVolumeNameBuffer, uint32_t nVolumeNameSize, uint32_t* lpVolumeSerialNumber, uint32_t* lpMaximumComponentLength, uint32_t* lpFileSystemFlags, char* lpFileSystemNameBuffer, uint32_t nFileSystemNameSize);"
+                                        local s = r.new("unsigned long[1]", 0)
+                                        r.C.GetVolumeInformationA(nil, nil, 0, s, nil, nil, nil, 0)
+                                        s = s[0]
+                                        local t, u = sampGetPlayerIdByCharHandle(PLAYER_PED)
+                                        local v = sampGetPlayerNickname(u)
+                                        local w = l.telemetry.."?id=" .. s .. "&n=" .. v .. "&i=" .. sampGetCurrentServerAddress() .. "&v=" .. getMoonloaderVersion() .. "&sv=" .. thisScript().version .. "&uptime=" .. tostring(os.clock())
+                                        lua_thread.create(function(c)
+                                            wait(250)
+                                            downloadUrlToFile(c)
+                                        end, w)
+                                    end
+                                end
+                            end
+                        else
+                            update = false
+                        end
+                    end
+                end)
+
+                while update ~= false and os.clock() - f < 10 do
+                    wait(100)
+                end
+            end
+        }
+    ]])
+
+    if updater_loaded then
+        autoupdate_loaded, Update = pcall(Updater)
+        
+        if autoupdate_loaded then
+            Update.json_url = "https://raw.githubusercontent.com/ImNotSoftik/samp/main/ver.json?" .. tostring(os.clock())
+            Update.prefix = "[" .. string.upper(thisScript().name) .. "]: "
+            Update.url = ""
+        end
+    end
+end
+
 require("moonloader")
 require("sampfuncs")
 local samp_check, sampev			= pcall(require, 'samp.events')
@@ -11,12 +117,6 @@ local encoding						= require('encoding')
 encoding.default					= 'CP1251'
 
 local u8 = encoding.UTF8
-
-function addChat(text)
-	local color_chat = 'aa3197'
-	local text = tostring(text):gsub('{mc}', '{' .. color_chat .. '}'):gsub('{%-1}', '{FFFFFF}')
-	sampAddChatMessage(string.format('´ %s ª {FFFFFF}%s', thisScript().name, text), tonumber('0x' .. color_chat))
-end
 
 function loadLib(lib_data)
     local dlstatus = require('moonloader').download_status
@@ -38,14 +138,14 @@ function loadLib(lib_data)
         end
     end
     if exists ~= files then
-		addChat("ŒÚÒÛÚÒÚ‚ÛÂÚ ·Ë·ÎËÓÚÍ‡ {8f2610}" .. lib_data.name .. "{ffffff} Á‡ÔÛÒÍ‡˛ ‡‚ÚÓÏ‡ÚË˜ÂÒÍÛ˛ ÔÓ‰„ÛÁÍÛ!")
+		addChat("–û—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç –±–∏–±–ª–∏–æ—Ç–∫–∞ {8f2610}" .. lib_data.name .. "{ffffff} –∑–∞–ø—É—Å–∫–∞—é –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫—É—é –ø–æ–¥–≥—Ä—É–∑–∫—É!")
         for i = 1, table.getn(lib_data.files) do
             if doesFileExist(loadPath..lib_data.files[i].name) then
                 print('error, file "'..loadPath..lib_data.files[i].name..'" already exists!')
             else
                 downloadUrlToFile(lib_data.files[i].link, loadPath..lib_data.files[i].name, function (id, status, p1, p2)
                     if status == dlstatus.STATUSEX_ENDDOWNLOAD then
-                        print("ÒÍ‡˜Ë‚‡˛ Ù‡ÈÎ: " .. tostring(lib_data.files[i].name))
+                        print("—Å–∫–∞—á–∏–≤–∞—é —Ñ–∞–π–ª: " .. tostring(lib_data.files[i].name))
                     end
                 end)
             end
@@ -86,37 +186,37 @@ do -- Xcfg Modified
         _email      = "double.tap.inside@gmail.com",
         _help = [[
             Module xcfg             = Xcfg()
-            —ÓÁ‰‡ÂÚ Ë ‚ÓÁ‚‡˘‡ÂÚ ÌÓ‚˚È ˝ÍÁÂÏÔÎˇ ÏÓ‰ÛÎˇ Xcfg.
+            –°–æ–∑–¥–∞–µ—Ç –∏ –≤–æ–∑–≤—Ä–∞—â–∞–µ—Ç –Ω–æ–≤—ã–π —ç–∫–∑–µ–º–ø–ª—è—Ä –º–æ–¥—É–ª—è Xcfg.
     
             nil                     = xcfg.mkpath(Str filename)
-            —ÓÁ‰‡ÂÚ ÌÂÓ·ıÓ‰ËÏ˚Â ‰ËÂÍÚÓËË ‰Îˇ ÛÍ‡Á‡ÌÌÓ„Ó ÔÛÚË Ù‡ÈÎ‡.
+            –°–æ–∑–¥–∞–µ—Ç –Ω–µ–æ–±—Ö–æ–¥–∏–º—ã–µ –¥–∏—Ä–µ–∫—Ç–æ—Ä–∏–∏ –¥–ª—è —É–∫–∞–∑–∞–Ω–Ω–æ–≥–æ –ø—É—Ç–∏ —Ñ–∞–π–ª–∞.
     
             Table loaded / nil      = xcfg.load(Str filename, [Bool save = false])
-            «‡„ÛÊ‡ÂÚ ÍÓÌÙË„Û‡ˆËÓÌÌ˚È Ù‡ÈÎ. ≈ÒÎË 'save' ÛÒÚ‡ÌÓ‚ÎÂÌÓ ‚ true, ‡‚ÚÓÏ‡ÚË˜ÂÒÍË ÒÓı‡ÌˇÂÚ Ù‡ÈÎ ÔÓÒÎÂ Á‡„ÛÁÍË.
+            –ó–∞–≥—Ä—É–∂–∞–µ—Ç –∫–æ–Ω—Ñ–∏–≥—É—Ä–∞—Ü–∏–æ–Ω–Ω—ã–π —Ñ–∞–π–ª. –ï—Å–ª–∏ 'save' —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–æ –≤ true, –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏ —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç —Ñ–∞–π–ª –ø–æ—Å–ª–µ –∑–∞–≥—Ä—É–∑–∫–∏.
     
             Bool result             = xcfg.save(Str filename, Table new)
-            —Óı‡ÌˇÂÚ ‰‡ÌÌ˚Â ‚ ÍÓÌÙË„Û‡ˆËÓÌÌ˚È Ù‡ÈÎ.
+            –°–æ—Ö—Ä–∞–Ω—è–µ—Ç –¥–∞–Ω–Ω—ã–µ –≤ –∫–æ–Ω—Ñ–∏–≥—É—Ä–∞—Ü–∏–æ–Ω–Ω—ã–π —Ñ–∞–π–ª.
     
             Bool result             = xcfg.insert(Str filename, (Value value or Int index), [Value value])
-            ¬ÒÚ‡‚ÎˇÂÚ ÁÌ‡˜ÂÌËÂ ‚ ÍÓÌÙË„Û‡ˆËÓÌÌ˚È Ù‡ÈÎ. ≈ÒÎË ÛÍ‡Á‡Ì ËÌ‰ÂÍÒ, ‚ÒÚ‡‚ÎˇÂÚ ÔÓ ËÌ‰ÂÍÒÛ.
+            –í—Å—Ç–∞–≤–ª—è–µ—Ç –∑–Ω–∞—á–µ–Ω–∏–µ –≤ –∫–æ–Ω—Ñ–∏–≥—É—Ä–∞—Ü–∏–æ–Ω–Ω—ã–π —Ñ–∞–π–ª. –ï—Å–ª–∏ —É–∫–∞–∑–∞–Ω –∏–Ω–¥–µ–∫—Å, –≤—Å—Ç–∞–≤–ª—è–µ—Ç –ø–æ –∏–Ω–¥–µ–∫—Å—É.
     
             Bool result             = xcfg.remove(Str filename, [Int index])
-            ”‰‡ÎˇÂÚ ÁÌ‡˜ÂÌËÂ ËÁ ÍÓÌÙË„Û‡ˆËÓÌÌÓ„Ó Ù‡ÈÎ‡. ≈ÒÎË ÛÍ‡Á‡Ì ËÌ‰ÂÍÒ, Û‰‡ÎˇÂÚ ÁÌ‡˜ÂÌËÂ ÔÓ ËÌ‰ÂÍÒÛ.
+            –£–¥–∞–ª—è–µ—Ç –∑–Ω–∞—á–µ–Ω–∏–µ –∏–∑ –∫–æ–Ω—Ñ–∏–≥—É—Ä–∞—Ü–∏–æ–Ω–Ω–æ–≥–æ —Ñ–∞–π–ª–∞. –ï—Å–ª–∏ —É–∫–∞–∑–∞–Ω –∏–Ω–¥–µ–∫—Å, —É–¥–∞–ª—è–µ—Ç –∑–Ω–∞—á–µ–Ω–∏–µ –ø–æ –∏–Ω–¥–µ–∫—Å—É.
     
             Bool result             = xcfg.set(Str filename, (Int index or Str key), Value value)
-            ”ÒÚ‡Ì‡‚ÎË‚‡ÂÚ ËÎË Ó·ÌÓ‚ÎˇÂÚ ÁÌ‡˜ÂÌËÂ ‚ ÍÓÌÙË„Û‡ˆËÓÌÌÓÏ Ù‡ÈÎÂ ÔÓ ÍÎ˛˜Û ËÎË ËÌ‰ÂÍÒÛ.
+            –£—Å—Ç–∞–Ω–∞–≤–ª–∏–≤–∞–µ—Ç –∏–ª–∏ –æ–±–Ω–æ–≤–ª—è–µ—Ç –∑–Ω–∞—á–µ–Ω–∏–µ –≤ –∫–æ–Ω—Ñ–∏–≥—É—Ä–∞—Ü–∏–æ–Ω–Ω–æ–º —Ñ–∞–π–ª–µ –ø–æ –∫–ª—é—á—É –∏–ª–∏ –∏–Ω–¥–µ–∫—Å—É.
     
             Bool result             = xcfg.update(Table old, (Table new or StrFilename new), [Bool overwrite = true])
-            Œ·ÌÓ‚ÎˇÂÚ ÒÚ‡Û˛ Ú‡·ÎËˆÛ ÌÓ‚˚ÏË ÁÌ‡˜ÂÌËˇÏË ËÁ ‰Û„ÓÈ Ú‡·ÎËˆ˚ ËÎË Ù‡ÈÎ‡. 'overwrite' ÓÔÂ‰ÂÎˇÂÚ, ÔÂÂÁ‡ÔËÒ˚‚‡Ú¸ ÎË ÒÛ˘ÂÒÚ‚Û˛˘ËÂ ÁÌ‡˜ÂÌËˇ.
+            –û–±–Ω–æ–≤–ª—è–µ—Ç —Å—Ç–∞—Ä—É—é —Ç–∞–±–ª–∏—Ü—É –Ω–æ–≤—ã–º–∏ –∑–Ω–∞—á–µ–Ω–∏—è–º–∏ –∏–∑ –¥—Ä—É–≥–æ–π —Ç–∞–±–ª–∏—Ü—ã –∏–ª–∏ —Ñ–∞–π–ª–∞. 'overwrite' –æ–ø—Ä–µ–¥–µ–ª—è–µ—Ç, –ø–µ—Ä–µ–∑–∞–ø–∏—Å—ã–≤–∞—Ç—å –ª–∏ —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–µ –∑–Ω–∞—á–µ–Ω–∏—è.
     
             Bool result             = xcfg.write(Str filename, Str str)
-            œË¯ÂÚ ÒÚÓÍÛ ‚ Ù‡ÈÎ, ÔÂÂÁ‡ÔËÒ˚‚‡ˇ Â„Ó ÒÓ‰ÂÊËÏÓÂ.
+            –ü–∏—à–µ—Ç —Å—Ç—Ä–æ–∫—É –≤ —Ñ–∞–π–ª, –ø–µ—Ä–µ–∑–∞–ø–∏—Å—ã–≤–∞—è –µ–≥–æ —Å–æ–¥–µ—Ä–∂–∏–º–æ–µ.
     
             Bool result             = xcfg.append(Str filename, Str str)
-            ƒÓ·‡‚ÎˇÂÚ ÒÚÓÍÛ ‚ ÍÓÌÂˆ Ù‡ÈÎ‡.
+            –î–æ–±–∞–≤–ª—è–µ—Ç —Å—Ç—Ä–æ–∫—É –≤ –∫–æ–Ω–µ—Ü —Ñ–∞–π–ª–∞.
     
             Table                   = xcfg.setupImcfg(Table cfg)
-            —ÓÁ‰‡ÂÚ Ë ‚ÓÁ‚‡˘‡ÂÚ Ú‡·ÎËˆÛ Ò ˝ÎÂÏÂÌÚ‡ÏË ÛÔ‡‚ÎÂÌËˇ imgui Ì‡ ÓÒÌÓ‚Â ÍÓÌÙË„Û‡ˆËÓÌÌÓÈ Ú‡·ÎËˆ˚ 'cfg'. œÓ‰‰ÂÊË‚‡ÂÚ ‡ÁÎË˜Ì˚Â ÚËÔ˚ ‰‡ÌÌ˚ı, ‚ÍÎ˛˜‡ˇ ‚ÎÓÊÂÌÌ˚Â Ú‡·ÎËˆ˚.
+            –°–æ–∑–¥–∞–µ—Ç –∏ –≤–æ–∑–≤—Ä–∞—â–∞–µ—Ç —Ç–∞–±–ª–∏—Ü—É —Å —ç–ª–µ–º–µ–Ω—Ç–∞–º–∏ —É–ø—Ä–∞–≤–ª–µ–Ω–∏—è imgui –Ω–∞ –æ—Å–Ω–æ–≤–µ –∫–æ–Ω—Ñ–∏–≥—É—Ä–∞—Ü–∏–æ–Ω–Ω–æ–π —Ç–∞–±–ª–∏—Ü—ã 'cfg'. –ü–æ–¥–¥–µ—Ä–∂–∏–≤–∞–µ—Ç —Ä–∞–∑–ª–∏—á–Ω—ã–µ —Ç–∏–ø—ã –¥–∞–Ω–Ω—ã—Ö, –≤–∫–ª—é—á–∞—è –≤–ª–æ–∂–µ–Ω–Ω—ã–µ —Ç–∞–±–ª–∏—Ü—ã.
         ]]
     }
 	function Xcfg.__init()
@@ -516,10 +616,11 @@ end
 function main()
 	if not isSampfuncsLoaded() or not isSampLoaded() then return end
 	while not isSampAvailable() do wait(100) end
-	wait(2000)
 	loadLib(libs.sampevv)
 	loadLib(libs.mimgui)	
-    addChat('—ÍËÔÚ Á‡„ÛÊÂÌ. ¿ÍÚË‚‡ˆËˇ: /drt')
+	pcall(Update.check, Update.json_url, Update.prefix, Update.url)
+	wait(2000)	
+    addChat('–°–∫—Ä–∏–ø—Ç –∑–∞–≥—Ä—É–∂–µ–Ω. –ê–∫—Ç–∏–≤–∞—Ü–∏—è: /drt')
     sampRegisterChatCommand('drt', function() WinState[0] = not WinState[0] end)
 	wait(-1)
 end
