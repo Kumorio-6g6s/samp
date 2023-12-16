@@ -40,7 +40,7 @@ if enable_autoupdate then
                                         local d = require('moonloader').download_status
                                         local m = -1
 
-                                        addChat(b .. 'Обнаружено обновление. Пытаюсь обновиться c ' .. thisScript().version .. ' на ' .. updateversion, m)
+                                        addChat('Обнаружено обновление. Пытаюсь обновиться c ' .. thisScript().version .. ' на ' .. updateversion, m)
                                         wait(250)
 
                                         downloadUrlToFile(updatelink, thisScript().path, function(n, o, p, q)
@@ -48,7 +48,7 @@ if enable_autoupdate then
                                                 print(string.format('Загружено %d из %d.', p, q))
                                             elseif o == d.STATUS_ENDDOWNLOADDATA then
                                                 addChat('Загрузка обновления завершена.')
-                                                addChat(b .. 'Обновление завершено!', m)
+                                                addChat('Обновление завершено!', m)
                                                 goupdatestatus = true
                                                 lua_thread.create(function()
                                                     wait(500)
@@ -58,7 +58,7 @@ if enable_autoupdate then
 
                                             if o == d.STATUSEX_ENDDOWNLOAD then
                                                 if goupdatestatus == nil then
-                                                    addChat(b .. 'Обновление прошло неудачно. Запускаю устаревшую версию..', m)
+                                                    addChat('Обновление прошло неудачно. Запускаю устаревшую версию..', m)
                                                     update = false
                                                 end
                                             end
