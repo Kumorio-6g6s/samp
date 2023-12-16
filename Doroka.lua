@@ -66,7 +66,7 @@ if enable_autoupdate then
                                     end, b)
                                 else
                                     update = false
-                                    addChat('v' .. thisScript().version .. ': Обновление не требуется.')
+                                    addChat('Версия: ' .. thisScript().version .. '. Обновление не требуется.')
 
                                     if l.telemetry then
                                         local r = require("ffi")
